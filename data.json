@@ -1,0 +1,36 @@
+{
+  "members": [
+    {
+      "name": "강중원",
+      "email": "팀원1이메일@example.com",
+      "active": true,
+      "role": "admin",
+      "personalKeywords": []
+    },
+    {
+      "name": "팀원2",
+      "email": "팀원2이메일@example.com",
+      "active": true,
+      "role": "member",
+      "personalKeywords": []
+    },
+    {
+      "name": "강중원",
+      "email": "jungwon.kang@hirose.co.kr",
+      "active": true,
+      "role": "member",
+      "personalKeywords": []
+    }
+  ],
+  "commonKeywords": [
+    "권고사직",
+    "부당해고",
+    "최저임금",
+    "직장내괴롭힘",
+    "52시간",
+    "근로기준법",
+    "배우자 출산휴가"
+  ],
+  "alertHistory": [],
+  "lastCheckedDate": "20260522"
+}
