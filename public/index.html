@@ -1,1 +1,1103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>법령 인사이트 - 법규·판례·개정 통합 알림</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0f2044;
+  --navy-mid: #1a3260;
+  --navy-light: #2a4574;
+  --accent: #c8922a;
+  --accent-light: #f0d090;
+  --bg: #f5f3ee;
+  --surface: #ffffff;
+  --border: #ddd9d0;
+  --text: #1a1a1a;
+  --muted: #6b6558;
+  --red: #b83232;
+  --red-bg: #fdf0f0;
+  --blue: #1a5296;
+  --blue-bg: #eef4fc;
+  --green: #1a6640;
+  --green-bg: #eef7f2;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
+/* 헤더 */
+header {
+  background: var(--navy); color: white;
+  padding: 0 2rem; display: flex; align-items: center; justify-content: space-between;
+  height: 60px; position: sticky; top: 0; z-index: 100;
+  border-bottom: 3px solid var(--accent);
+}
+.logo { font-family: 'Noto Serif KR', serif; font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.logo-icon { width: 28px; height: 28px; background: var(--accent); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+
+/* 탭 */
+.tabs { background: var(--navy-mid); display: flex; padding: 0 2rem; }
+.tab-btn { padding: 12px 20px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.55); border: none; background: transparent; cursor: pointer; border-bottom: 2px solid transparent; font-family: 'Noto Sans KR', sans-serif; transition: all 0.2s; }
+.tab-btn.active { color: var(--accent-light); border-bottom-color: var(--accent); }
+.tab-btn:hover { color: rgba(255,255,255,0.85); }
+
+/* 레이아웃 */
+main { max-width: 1280px; margin: 0 auto; padding: 2rem 1.5rem; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* 검색창 */
+.search-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.4rem; margin-bottom: 1.5rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+.search-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.search-row input { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-size: 14px; font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); }
+.search-row input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.btn-search { background: var(--navy); color: white; border: none; border-radius: 6px; padding: 10px 24px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; white-space: nowrap; }
+.btn-search:hover { background: var(--navy-mid); }
+.quick-tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.qtag { font-size: 12px; padding: 4px 12px; border-radius: 99px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); cursor: pointer; font-family: 'Noto Sans KR', sans-serif; transition: all 0.15s; }
+.qtag:hover { border-color: var(--accent); color: var(--accent); }
+
+/* 결과 헤더 */
+.result-stats { font-size: 13px; color: var(--muted); text-align: center; margin: 1rem 0 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.result-stats strong { color: var(--navy); }
+.expanded-keywords { display: inline-flex; gap: 4px; margin-left: 8px; flex-wrap: wrap; }
+.kw-chip { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--accent-light); color: var(--navy); }
+
+/* 섹션 제목 */
+.section-heading {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 18px; font-weight: 700; color: var(--navy);
+  margin: 2rem 0 1rem;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-heading::before {
+  content: ''; display: inline-block;
+  width: 4px; height: 18px; background: var(--accent); border-radius: 2px;
+}
+
+/* 가로 슬라이드 카드 영역 */
+.carousel-wrap { position: relative; }
+.carousel {
+  display: flex; gap: 14px;
+  overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.carousel::-webkit-scrollbar { height: 6px; }
+.carousel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.carousel-btn {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--navy); font-size: 16px; cursor: pointer;
+  z-index: 5; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  display: flex; align-items: center; justify-content: center;
+}
+.carousel-btn:hover { background: var(--navy); color: white; }
+.carousel-btn.prev { left: -8px; }
+.carousel-btn.next { right: -8px; }
+
+/* 법령 카드 */
+.law-card {
+  flex: 0 0 360px;
+  min-height: 280px;
+  background: var(--surface);
+  border: 1px solid var(--border); border-radius: 10px;
+  overflow: hidden;
+  scroll-snap-align: start;
+  display: flex; flex-direction: column;
+}
+.law-card-header { background: var(--navy); color: white; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.law-card-name { font-family: 'Noto Serif KR', serif; font-size: 14px; font-weight: 600; line-height: 1.3; }
+.law-card-date { font-size: 11px; color: rgba(255,255,255,0.65); white-space: nowrap; }
+.law-card-sub { background: var(--navy-mid); padding: 6px 16px; display: flex; gap: 6px; flex-wrap: wrap; }
+.law-tag { font-size: 10px; padding: 2px 7px; border-radius: 99px; font-weight: 500; }
+.law-tag.gold { background: rgba(200,146,42,0.25); color: var(--accent-light); }
+.law-tag.white { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.75); }
+.law-card-body {
+  padding: 14px 16px;
+  flex: 1;
+  overflow-y: auto;
+  max-height: 340px;
+}
+.article-block { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px dashed var(--border); }
+.article-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.article-num-tag {
+  display: inline-block;
+  font-size: 11px; font-weight: 700;
+  color: var(--navy);
+  background: var(--blue-bg);
+  padding: 2px 9px; border-radius: 99px;
+  margin-bottom: 6px;
+}
+.article-text { font-size: 12.5px; line-height: 1.7; color: var(--text); }
+.hang-line { margin-top: 4px; }
+.hang-mark { color: var(--muted); margin-right: 3px; }
+.ho-line { margin-left: 1rem; margin-top: 3px; font-size: 12.5px; line-height: 1.6; color: var(--text); }
+mark { background: #fff3cd; color: #8a5c00; border-radius: 2px; padding: 0 2px; }
+.law-card-footer { padding: 8px 16px; background: var(--bg); border-top: 1px solid var(--border); }
+.law-card-footer a { font-size: 11px; color: var(--blue); text-decoration: none; }
+.law-card-footer a:hover { text-decoration: underline; }
+
+/* 빈 결과 */
+.empty-card { flex: 0 0 100%; padding: 2rem; text-align: center; color: var(--muted); font-size: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+
+/* 판례 카드 */
+.prec-card {
+  flex: 0 0 340px;
+  background: var(--surface);
+  border: 1px solid var(--border); border-radius: 10px;
+  overflow: hidden;
+  scroll-snap-align: start;
+  display: flex; flex-direction: column;
+}
+.prec-card-header { background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%); color: white; padding: 12px 16px; }
+.prec-card-court { font-size: 11px; color: var(--accent-light); margin-bottom: 3px; font-weight: 500; }
+.prec-card-case { font-family: 'Noto Serif KR', serif; font-size: 13px; font-weight: 600; line-height: 1.4; }
+.prec-card-body { padding: 14px 16px; flex: 1; }
+.prec-card-title { font-size: 13px; font-weight: 500; color: var(--navy); margin-bottom: 6px; }
+.prec-card-summary { font-size: 12.5px; color: var(--text); line-height: 1.7; max-height: 180px; overflow-y: auto; }
+.prec-card-footer { padding: 8px 16px; background: var(--bg); border-top: 1px solid var(--border); }
+.prec-card-footer a { font-size: 11px; color: var(--blue); text-decoration: none; }
+.prec-card-footer a:hover { text-decoration: underline; }
+
+/* 알림 */
+.section-title { font-size: 13px; color: var(--muted); margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.alert-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.1rem 1.3rem; margin-bottom: 8px; border-left: 4px solid var(--accent); }
+.alert-card.new { border-left-color: var(--red); }
+.alert-card.info { border-left-color: var(--blue); }
+.alert-title-text { font-size: 14px; font-weight: 500; color: var(--navy); margin: 6px 0 4px; }
+.alert-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.alert-date { font-size: 12px; color: var(--muted); margin-top: 7px; }
+.tag2 { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 99px; }
+.tag2-red { background: var(--red-bg); color: var(--red); }
+.tag2-blue { background: var(--blue-bg); color: var(--blue); }
+.tag2-gold { background: #fdf5e4; color: #8a6310; }
+
+/* 팀원 */
+.member-table { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 1rem; }
+.member-row { display: flex; align-items: center; padding: 12px 1.2rem; border-bottom: 1px solid var(--border); gap: 10px; }
+.member-row:last-child { border-bottom: none; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--navy); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.member-info { flex: 1; }
+.member-name { font-size: 14px; font-weight: 500; }
+.member-email { font-size: 12px; color: var(--muted); }
+.toggle-wrap { display: flex; align-items: center; gap: 8px; }
+.toggle { width: 38px; height: 22px; border-radius: 99px; border: none; cursor: pointer; position: relative; transition: background 0.2s; }
+.toggle.on { background: var(--navy); }
+.toggle.off { background: var(--border); }
+.toggle::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: white; top: 3px; transition: left 0.2s; }
+.toggle.on::after { left: 19px; }
+.toggle.off::after { left: 3px; }
+.toggle-lbl { font-size: 12px; color: var(--muted); width: 26px; }
+.add-form { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.1rem 1.2rem; }
+.add-form p { font-size: 14px; font-weight: 500; margin-bottom: 10px; color: var(--navy); }
+.form-row { display: flex; gap: 8px; }
+.form-input { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; font-size: 13px; font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); }
+.form-input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+
+/* 로딩/빈 */
+.loading { text-align: center; padding: 2.5rem; color: var(--muted); font-size: 14px; }
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--navy); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
+
+/* 최신 개정 */
+.recent-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 8px; border-left: 3px solid transparent; }
+.recent-card:hover { border-left-color: var(--accent); }
+.recent-name { font-size: 14px; font-weight: 500; color: var(--navy); margin-bottom: 5px; }
+.recent-meta { font-size: 12px; color: var(--muted); }
+
+/* 펼치기 카드 */
+.recent-card-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  border-left: 3px solid transparent;
+  transition: border-left-color 0.2s;
+}
+.recent-card-wrap:hover { border-left-color: var(--accent); }
+.recent-card-clickable {
+  padding: 1rem 1.2rem;
+  cursor: pointer;
+  user-select: none;
+}
+.expand-icon {
+  font-size: 14px;
+  color: var(--muted);
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+}
+.recent-detail {
+  border-top: 1px dashed var(--border);
+  background: var(--bg);
+  animation: slideDown 0.3s ease-out;
+}
+@keyframes slideDown {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 2000px; }
+}
+.detail-content { padding: 1.2rem 1.4rem; }
+.detail-section { margin-bottom: 1.2rem; }
+.detail-section:last-child { margin-bottom: 0; }
+.detail-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-section-body {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text);
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.detail-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.detail-link-btn {
+  font-size: 12px;
+  padding: 6px 14px;
+  border: 1px solid var(--navy);
+  color: var(--navy);
+  background: transparent;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.detail-link-btn:hover {
+  background: var(--navy);
+  color: white;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚖</div>
+    <div>법령 인사이트</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('search',this)">법령 검색</button>
+  <button class="tab-btn" onclick="switchTab('recent',this)">최신 개정</button>
+  <button class="tab-btn" onclick="switchTab('alerts',this)">🔔 알림 내역</button>
+  <button class="tab-btn" onclick="switchTab('keywords',this)">📌 키워드 관리</button>
+  <button class="tab-btn" onclick="switchTab('members',this)">팀원 관리</button>
+</div>
+
+<main>
+  <!-- 법령 검색 -->
+  <div id="tab-search" class="tab-panel active">
+    <div class="search-wrap">
+      <div class="search-row">
+        <input id="searchInput" type="text" placeholder="키워드를 입력해주세요 (예: 권고사직, 연차휴가, 노동절, 산재...)"
+          onkeydown="if(event.key==='Enter') doSearch()" />
+        <button class="btn-search" onclick="doSearch()">검색</button>
+      </div>
+      <div class="quick-tags">
+        <span class="qtag" onclick="qs('권고사직')">권고사직</span>
+        <span class="qtag" onclick="qs('연차휴가')">연차휴가</span>
+        <span class="qtag" onclick="qs('부당해고')">부당해고</span>
+        <span class="qtag" onclick="qs('퇴직금')">퇴직금</span>
+        <span class="qtag" onclick="qs('육아휴직')">육아휴직</span>
+        <span class="qtag" onclick="qs('파견')">파견</span>
+        <span class="qtag" onclick="qs('산재')">산재</span>
+        <span class="qtag" onclick="qs('실업급여')">실업급여</span>
+        <span class="qtag" onclick="qs('최저임금')">최저임금</span>
+        <span class="qtag" onclick="qs('노동조합')">노동조합</span>
+      </div>
+    </div>
+    <div id="searchResult"></div>
+  </div>
+
+  <!-- 최신 개정 -->
+  <div id="tab-recent" class="tab-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <p class="section-title" style="border:none; margin:0; padding:0;">최근 개정 법령</p>
+      <select id="recentCategory" onchange="loadRecent()" style="padding:6px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text); font-family:'Noto Sans KR', sans-serif;">
+        <option value="">전체</option>
+        <option value="노동법(1)">노동법(1) - 근로기준법 등</option>
+        <option value="노동법(2)">노동법(2) - 노조법 등</option>
+        <option value="민법">민법</option>
+        <option value="사회보험법">사회보험법</option>
+        <option value="기타 노동법령">기타 노동법령</option>
+      </select>
+    </div>
+    <div id="recentResult"><div class="loading"><span class="spinner"></span>불러오는 중...</div></div>
+  </div>
+
+  <!-- 알림 내역 -->
+  <div id="tab-alerts" class="tab-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <p class="section-title" style="border:none; margin:0; padding:0;">키워드 관련 새 소식</p>
+      <button class="btn-search" onclick="checkAlertsNow()" style="padding:6px 14px; font-size:12px;">🔄 지금 확인</button>
+    </div>
+    <div id="alertList"><div class="loading"><span class="spinner"></span>불러오는 중...</div></div>
+  </div>
+
+  <!-- 키워드 관리 -->
+  <div id="tab-keywords" class="tab-panel">
+    <p class="section-title">📌 공통 키워드 (관리자가 설정, 모든 팀원에게 알림)</p>
+    <div class="add-form" style="margin-bottom:1.5rem;">
+      <div class="form-row">
+        <input class="form-input" id="newCommonKw" type="text" placeholder="예: 개인정보, 부동산, 권고사직, 음주운전..."
+          onkeydown="if(event.key==='Enter') addCommonKeyword()" />
+        <button class="btn-search" onclick="addCommonKeyword()">추가</button>
+      </div>
+      <div id="commonKwList" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:6px;">
+        <div class="loading" style="padding:1rem;"><span class="spinner"></span>불러오는 중...</div>
+      </div>
+    </div>
+
+    <p class="section-title">👤 개인 키워드 (팀원이 자신만 받을 키워드 설정)</p>
+    <div id="personalKwSection">
+      <div class="loading"><span class="spinner"></span>불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- 팀원 관리 -->
+  <div id="tab-members" class="tab-panel">
+    <p class="section-title">알림 수신 팀원</p>
+    <div class="member-table" id="memberList"><div class="loading"><span class="spinner"></span>불러오는 중...</div></div>
+    <div class="add-form">
+      <p>팀원 추가</p>
+      <div class="form-row">
+        <input class="form-input" id="newName" type="text" placeholder="이름" style="max-width:110px;" />
+        <input class="form-input" id="newEmail" type="email" placeholder="이메일 주소" />
+        <button class="btn-search" onclick="addMember()">추가</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const API_BASE = 'http://localhost:3000';
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  el.classList.add('active');
+  if (name === 'recent') loadRecent();
+  if (name === 'members') loadMembers();
+  if (name === 'alerts') loadAlerts();
+  if (name === 'keywords') loadKeywords();
+}
+
+function qs(term) { document.getElementById('searchInput').value = term; doSearch(); }
+
+async function doSearch() {
+  const query = document.getElementById('searchInput').value.trim();
+  if (!query) return;
+  const box = document.getElementById('searchResult');
+  box.innerHTML = '<div class="loading"><span class="spinner"></span>법령 · 조문 · 판례 · 행정해석 검색 중... (15-20초 소요)</div>';
+
+  try {
+    const resp = await fetch(API_BASE + '/api/search?query=' + encodeURIComponent(query));
+    const data = await resp.json();
+    const laws = data.results || [];
+    const precs = data.precedents || [];
+    const stats = data.stats || {};
+    const expanded = data.expandedKeywords || [];
+
+    let html = '<div class="result-stats">';
+    html += '"<strong>' + esc(query) + '</strong>" 검색 결과 — ';
+    html += '<strong>' + stats.법령수 + '</strong>개 법령, ';
+    html += '<strong>' + stats.조문수 + '</strong>개 조문, ';
+    html += '<strong>' + stats.판례수 + '</strong>개 판례';
+    if (stats.행정해석수 !== undefined) {
+      html += ', <strong>' + stats.행정해석수 + '</strong>개 행정해석';
+    }
+    if (data.totalCandidates && data.totalCandidates > laws.length) {
+      html += '<span style="font-size:11px; color:var(--muted); margin-left:8px;">(전체 ' + data.totalCandidates + '개 중 상위 ' + laws.length + '개 표시)</span>';
+    }
+
+    if (expanded.length > 1) {
+      html += '<div class="expanded-keywords" style="margin-top:8px; justify-content:center; display:flex;">';
+      html += '<span style="font-size:11px;color:var(--muted);">함께 검색:</span>';
+      expanded.forEach(k => { html += '<span class="kw-chip">' + esc(k) + '</span>'; });
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // ── 관련 법규 섹션 ──
+    html += '<h2 class="section-heading">관련 법규</h2>';
+    if (laws.length === 0) {
+      html += '<div class="empty-card">검색 결과가 없습니다.</div>';
+    } else {
+      html += '<div class="carousel-wrap">';
+      if (laws.length > 1) {
+        html += '<button class="carousel-btn prev" onclick="scrollCarousel(\'lawCarousel\',-1)">‹</button>';
+        html += '<button class="carousel-btn next" onclick="scrollCarousel(\'lawCarousel\',1)">›</button>';
+      }
+      html += '<div class="carousel" id="lawCarousel">';
+      laws.forEach(law => { html += renderLawCard(law, query); });
+      html += '</div></div>';
+    }
+
+    // ── 관련 판례 섹션 ──
+    const precTotal = data.precedentsTotal || precs.length;
+    if (precs.length > 0) {
+      html += '<h2 class="section-heading">관련 판례 <span style="font-size:13px; color:var(--muted); font-weight:400; font-family:Noto Sans KR;">(전체 ' + precTotal + '건 중 ' + precs.length + '건)</span></h2>';
+      html += '<div class="carousel-wrap">';
+      if (precs.length > 1) {
+        html += '<button class="carousel-btn prev" onclick="scrollCarousel(\'precCarousel\',-1)">‹</button>';
+        html += '<button class="carousel-btn next" onclick="scrollCarousel(\'precCarousel\',1)">›</button>';
+      }
+      html += '<div class="carousel" id="precCarousel">';
+      precs.forEach(p => { html += renderPrecCard(p); });
+      html += '</div></div>';
+
+      // 더보기 버튼 (전체 건수가 현재보다 많을 때만)
+      if (precTotal > precs.length) {
+        html += '<div style="text-align:center; margin-top:1rem;">';
+        html += '<button id="loadMorePrecBtn" class="btn-search" onclick="loadMorePrecedents()" style="padding:10px 30px; font-size:13px;">';
+        html += '↓ 판례 더보기 (' + (precTotal - precs.length) + '건 남음)';
+        html += '</button>';
+        html += '</div>';
+      }
+    }
+
+    // ── 행정해석 섹션 ──
+    const expcs = data.expcs || [];
+    const expcTotal = data.expcsTotal || 0;
+    if (expcs.length > 0) {
+      html += '<h2 class="section-heading">관련 행정해석 <span style="font-size:13px; color:var(--muted); font-weight:400; font-family:Noto Sans KR;">(전체 ' + expcTotal + '건 중 ' + expcs.length + '건)</span></h2>';
+      html += '<div class="carousel-wrap">';
+      if (expcs.length > 1) {
+        html += '<button class="carousel-btn prev" onclick="scrollCarousel(\'expcCarousel\',-1)">‹</button>';
+        html += '<button class="carousel-btn next" onclick="scrollCarousel(\'expcCarousel\',1)">›</button>';
+      }
+      html += '<div class="carousel" id="expcCarousel">';
+      expcs.forEach(e => { html += renderExpcCard(e); });
+      html += '</div></div>';
+
+      if (expcTotal > expcs.length) {
+        html += '<div style="text-align:center; margin-top:1rem;">';
+        html += '<button id="loadMoreExpcBtn" class="btn-search" onclick="loadMoreExpcs()" style="padding:10px 30px; font-size:13px;">';
+        html += '↓ 행정해석 더보기 (' + (expcTotal - expcs.length) + '건 남음)';
+        html += '</button>';
+        html += '</div>';
+      }
+    }
+
+    // 페이지네이션 상태 저장
+    window._precState = {
+      query,
+      currentPage: 1,
+      loadedItems: precs.slice(),
+      total: precTotal,
+    };
+    window._expcState = {
+      query,
+      currentPage: 1,
+      loadedItems: expcs.slice(),
+      total: expcTotal,
+    };
+
+    box.innerHTML = html;
+  } catch(e) {
+    box.innerHTML = '<div class="empty">서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.</div>';
+  }
+}
+
+// 행정해석 카드 렌더링
+function renderExpcCard(e) {
+  let html = '<div class="prec-card">';
+  html += '<div class="prec-card-header" style="background: linear-gradient(135deg, #1a3260 0%, #2a4574 100%);">';
+  html += '<div class="prec-card-court">' + esc(e.해석기관 || '고용노동부') + ' · ' + fmtDate(e.회신일자) + '</div>';
+  html += '<div class="prec-card-case">' + esc(e.안건명 || '행정해석') + '</div>';
+  if (e.안건번호) html += '<div style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:3px;">' + esc(e.안건번호) + '</div>';
+  html += '</div>';
+  html += '<div class="prec-card-body">';
+  if (e.질의요지) {
+    html += '<div class="prec-card-title">질의 요지</div>';
+    html += '<div class="prec-card-summary" style="margin-bottom:10px;">' + esc(e.질의요지) + '</div>';
+  }
+  if (e.회답) {
+    html += '<div class="prec-card-title">회답</div>';
+    html += '<div class="prec-card-summary">' + esc(e.회답) + '</div>';
+  }
+  if (!e.질의요지 && !e.회답) {
+    html += '<div class="prec-card-summary" style="color:var(--muted);">상세 내용은 전문에서 확인하세요.</div>';
+  }
+  html += '</div>';
+  html += '<div class="prec-card-footer">';
+  if (e.링크) {
+    html += '<a href="' + esc(e.링크) + '" target="_blank" rel="noopener">→ 행정해석 전문 보기</a>';
+  } else {
+    html += '<span style="font-size:11px; color:var(--muted);">전문 링크 없음</span>';
+  }
+  html += '</div>';
+  html += '</div>';
+  return html;
+}
+
+// 행정해석 더보기
+async function loadMoreExpcs() {
+  if (!window._expcState) return;
+  const btn = document.getElementById('loadMoreExpcBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '불러오는 중...'; }
+
+  try {
+    const nextPage = window._expcState.currentPage + 1;
+    const resp = await fetch(API_BASE + '/api/expcs?query=' + encodeURIComponent(window._expcState.query) + '&page=' + nextPage);
+    const data = await resp.json();
+    const newItems = data.items || [];
+
+    if (newItems.length === 0) {
+      if (btn) btn.textContent = '더 이상 없음';
+      return;
+    }
+
+    window._expcState.currentPage = nextPage;
+    window._expcState.loadedItems.push(...newItems);
+
+    const carousel = document.getElementById('expcCarousel');
+    if (carousel) {
+      newItems.forEach(e => {
+        carousel.insertAdjacentHTML('beforeend', renderExpcCard(e));
+      });
+    }
+
+    const remaining = window._expcState.total - window._expcState.loadedItems.length;
+    if (remaining > 0 && btn) {
+      btn.disabled = false;
+      btn.textContent = '↓ 행정해석 더보기 (' + remaining + '건 남음)';
+    } else if (btn) {
+      btn.parentElement.remove();
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '오류 발생 - 다시 시도'; }
+  }
+}
+
+// 판례 더보기
+async function loadMorePrecedents() {
+  if (!window._precState) return;
+  const btn = document.getElementById('loadMorePrecBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '불러오는 중...'; }
+
+  try {
+    const nextPage = window._precState.currentPage + 1;
+    const resp = await fetch(API_BASE + '/api/precedents?query=' + encodeURIComponent(window._precState.query) + '&page=' + nextPage);
+    const data = await resp.json();
+    const newItems = data.items || [];
+
+    if (newItems.length === 0) {
+      if (btn) btn.textContent = '더 이상 없음';
+      return;
+    }
+
+    window._precState.currentPage = nextPage;
+    window._precState.loadedItems.push(...newItems);
+
+    // 캐러셀에 추가
+    const carousel = document.getElementById('precCarousel');
+    if (carousel) {
+      newItems.forEach(p => {
+        carousel.insertAdjacentHTML('beforeend', renderPrecCard(p));
+      });
+    }
+
+    // 버튼 업데이트
+    const remaining = window._precState.total - window._precState.loadedItems.length;
+    if (remaining > 0 && btn) {
+      btn.disabled = false;
+      btn.textContent = '↓ 판례 더보기 (' + remaining + '건 남음)';
+    } else if (btn) {
+      btn.parentElement.remove();
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '오류 발생 - 다시 시도'; }
+  }
+}
+
+function renderLawCard(law, query) {
+  let html = '<div class="law-card">';
+  html += '<div class="law-card-header">';
+  html += '<div class="law-card-name">' + esc(law.법령명) + '</div>';
+  html += '<div class="law-card-date">시행 ' + fmtDate(law.시행일자) + '</div>';
+  html += '</div>';
+  html += '<div class="law-card-sub">';
+  if (law.카테고리) html += '<span class="law-tag gold">' + esc(law.카테고리) + '</span>';
+  if (law.법령구분) html += '<span class="law-tag white">' + esc(law.법령구분) + '</span>';
+  if (law.소관부처) html += '<span class="law-tag white">' + esc(law.소관부처) + '</span>';
+  html += '</div>';
+
+  html += '<div class="law-card-body">';
+  if (!law.articles || law.articles.length === 0) {
+    html += '<p style="font-size:13px; color:var(--muted);">이 법령에서 직접 매칭되는 조문은 찾지 못했지만, 관련 법규일 수 있습니다.</p>';
+  } else {
+    law.articles.forEach(a => {
+      html += '<div class="article-block">';
+      let numLabel = '제' + a.조문번호 + '조';
+      if (a.조문제목) numLabel += ' (' + esc(a.조문제목) + ')';
+      html += '<div class="article-num-tag">' + numLabel + '</div>';
+
+      if (a.조문내용 && a.조문내용.trim()) {
+        html += '<div class="article-text">' + hiliteAll(a.조문내용, query) + '</div>';
+      }
+
+      if (a.항 && a.항.length > 0) {
+        const circles = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩'];
+        a.항.forEach((h, hi) => {
+          if (h.항내용) {
+            html += '<div class="hang-line">';
+            html += '<span class="hang-mark">' + (circles[hi] || (hi+1)+'.') + '</span>';
+            html += '<span class="article-text">' + hiliteAll(h.항내용, query) + '</span>';
+            html += '</div>';
+          }
+          if (h.호 && h.호.length > 0) {
+            h.호.forEach(ho => {
+              if (ho.호내용) {
+                html += '<div class="ho-line">';
+                html += '<span class="hang-mark">' + esc(ho.호번호) + '</span>';
+                html += hiliteAll(ho.호내용, query);
+                html += '</div>';
+              }
+            });
+          }
+        });
+      }
+      html += '</div>';
+    });
+  }
+  html += '</div>';
+
+  html += '<div class="law-card-footer">';
+  html += '<a href="https://www.law.go.kr/법령/' + encodeURIComponent(law.법령명) + '" target="_blank" rel="noopener">→ 전문 보기 (국가법령정보센터)</a>';
+  html += '</div>';
+  html += '</div>';
+  return html;
+}
+
+function renderPrecCard(p) {
+  let html = '<div class="prec-card">';
+  html += '<div class="prec-card-header">';
+  html += '<div class="prec-card-court">' + esc(p.법원명 || '대법원') + ' · ' + fmtDate(p.선고일자) + '</div>';
+  html += '<div class="prec-card-case">' + esc(p.사건명 || '판례') + '</div>';
+  if (p.사건번호) html += '<div style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:3px;">' + esc(p.사건번호) + '</div>';
+  html += '</div>';
+  html += '<div class="prec-card-body">';
+  if (p.판시사항) {
+    html += '<div class="prec-card-title">판시사항</div>';
+    const summary = p.판시사항.length > 250 ? p.판시사항.slice(0,250) + '...' : p.판시사항;
+    html += '<div class="prec-card-summary">' + esc(summary) + '</div>';
+  } else {
+    html += '<div class="prec-card-summary" style="color:var(--muted);">판시사항 정보 없음. 전문에서 확인하세요.</div>';
+  }
+  html += '</div>';
+
+  // 판례 링크 - 판례일련번호 기반 정확한 URL
+  html += '<div class="prec-card-footer">';
+  if (p.링크) {
+    html += '<a href="' + esc(p.링크) + '" target="_blank" rel="noopener">→ 판례 전문 보기</a>';
+  } else if (p.검색링크) {
+    html += '<a href="' + esc(p.검색링크) + '" target="_blank" rel="noopener">→ 국가법령정보센터에서 검색</a>';
+  } else {
+    html += '<span style="font-size:11px; color:var(--muted);">전문 링크 없음</span>';
+  }
+  html += '</div>';
+
+  html += '</div>';
+  return html;
+}
+
+function scrollCarousel(id, dir) {
+  const el = document.getElementById(id);
+  if (el) el.scrollBy({ left: dir * 380, behavior: 'smooth' });
+}
+
+async function loadRecent() {
+  const box = document.getElementById('recentResult');
+  const categoryEl = document.getElementById('recentCategory');
+  const category = categoryEl ? categoryEl.value : '';
+  box.innerHTML = '<div class="loading"><span class="spinner"></span>불러오는 중...</div>';
+  try {
+    const url = API_BASE + '/api/recent' + (category ? '?category=' + encodeURIComponent(category) : '');
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const laws = data?.LawSearch?.law || [];
+    if (!laws.length) { box.innerHTML = '<div class="empty">데이터가 없습니다.</div>'; return; }
+
+    box.innerHTML = laws.map((l, idx) => {
+      const lawName = esc(l.법령명한글 || l.법령명);
+      const mst = l.법령일련번호;
+      const meta = (l.소관부처명 ? esc(l.소관부처명) + ' · ' : '') +
+                   '공포 ' + fmtDate(l.공포일자) + ' · 시행 ' + fmtDate(l.시행일자) +
+                   (l.제개정구분명 ? ' · ' + esc(l.제개정구분명) : '');
+
+      return `
+        <div class="recent-card-wrap" data-mst="${esc(mst)}" data-idx="${idx}">
+          <div class="recent-card-clickable" onclick="toggleRecentDetail(${idx})">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+              <div style="flex:1; min-width:0;">
+                <div class="recent-name">${lawName}</div>
+                <div class="recent-meta">${meta}</div>
+              </div>
+              <div class="expand-icon" id="expand-icon-${idx}">▼</div>
+            </div>
+          </div>
+          <div class="recent-detail" id="recent-detail-${idx}" style="display:none;"></div>
+        </div>
+      `;
+    }).join('');
+  } catch(e) { box.innerHTML = '<div class="empty">서버에 연결할 수 없습니다.</div>'; }
+}
+
+// 최신 개정 - 상세 펼치기/접기
+async function toggleRecentDetail(idx) {
+  const detail = document.getElementById('recent-detail-' + idx);
+  const icon = document.getElementById('expand-icon-' + idx);
+  const wrap = document.querySelector('.recent-card-wrap[data-idx="' + idx + '"]');
+  if (!detail || !wrap) return;
+
+  // 이미 열려있으면 닫기
+  if (detail.style.display === 'block') {
+    detail.style.display = 'none';
+    icon.textContent = '▼';
+    icon.style.transform = 'rotate(0deg)';
+    return;
+  }
+
+  // 열기
+  icon.textContent = '▼';
+  icon.style.transform = 'rotate(180deg)';
+  detail.style.display = 'block';
+
+  // 이미 로드된 경우 재호출하지 않음
+  if (detail.dataset.loaded === 'true') return;
+
+  const mst = wrap.dataset.mst;
+  detail.innerHTML = '<div class="loading"><span class="spinner"></span>개정 내용 불러오는 중...</div>';
+
+  try {
+    const resp = await fetch(API_BASE + '/api/law-detail/' + encodeURIComponent(mst));
+    const d = await resp.json();
+
+    if (d.error) {
+      detail.innerHTML = '<div style="padding:1rem; color:var(--muted); font-size:13px;">개정 내용을 불러올 수 없습니다.</div>';
+      return;
+    }
+
+    let html = '<div class="detail-content">';
+
+    // 개정 사유
+    if (d.개정이유 && d.개정이유.trim()) {
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">📌 개정 이유</div>';
+      html += '<div class="detail-section-body">' + esc(d.개정이유).replace(/\n/g, '<br>') + '</div>';
+      html += '</div>';
+    }
+
+    // 개정문 (기존 → 변경 내용)
+    if (d.개정문 && typeof d.개정문 === 'string' && d.개정문.trim()) {
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">📝 개정 내용</div>';
+      html += '<div class="detail-section-body" style="white-space:pre-wrap;">' + esc(d.개정문) + '</div>';
+      html += '</div>';
+    } else if (d.개정문) {
+      // 개정문이 객체 형태인 경우
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">📝 개정 내용</div>';
+      html += '<div class="detail-section-body">' + esc(JSON.stringify(d.개정문, null, 2).slice(0, 1000)) + '</div>';
+      html += '</div>';
+    }
+
+    // 부칙
+    if (d.부칙 && Object.keys(d.부칙).length > 0) {
+      const buchik = JSON.stringify(d.부칙);
+      if (buchik.length > 10) {
+        html += '<div class="detail-section">';
+        html += '<div class="detail-section-title">📋 부칙 (시행일/적용 규정)</div>';
+        const text = typeof d.부칙 === 'string' ? d.부칙 : (d.부칙.부칙내용 || JSON.stringify(d.부칙).slice(0, 800));
+        html += '<div class="detail-section-body" style="font-size:12px;">' + esc(text) + '</div>';
+        html += '</div>';
+      }
+    }
+
+    // 내용이 없을 때
+    if ((!d.개정이유 || !d.개정이유.trim()) && (!d.개정문 || (typeof d.개정문 === 'string' && !d.개정문.trim()))) {
+      html += '<div style="padding:1rem; color:var(--muted); font-size:13px; text-align:center;">';
+      html += '개정 이유 및 개정문 정보가 제공되지 않습니다.<br>아래 링크를 통해 법제처에서 직접 확인하세요.';
+      html += '</div>';
+    }
+
+    // 외부 링크
+    html += '<div class="detail-links">';
+    html += '<a href="' + esc(d.상세링크) + '" target="_blank" rel="noopener" class="detail-link-btn">→ 법령 본문 (국가법령정보센터)</a>';
+    html += '<a href="' + esc(d.대비표링크) + '" target="_blank" rel="noopener" class="detail-link-btn">→ 신구조문대비표</a>';
+    html += '</div>';
+
+    html += '</div>';
+
+    detail.innerHTML = html;
+    detail.dataset.loaded = 'true';
+  } catch(e) {
+    detail.innerHTML = '<div style="padding:1rem; color:var(--muted); font-size:13px;">서버 오류로 불러올 수 없습니다.</div>';
+  }
+}
+
+
+async function loadMembers() {
+  const box = document.getElementById('memberList');
+  try {
+    const resp = await fetch(API_BASE + '/api/members');
+    const members = await resp.json();
+    if (!members.length) { box.innerHTML = '<div class="empty">등록된 팀원이 없습니다.</div>'; return; }
+    box.innerHTML = members.map(m => '<div class="member-row"><div class="avatar">' + m.name.slice(0,2) + '</div><div class="member-info"><div class="member-name">' + esc(m.name) + '</div><div class="member-email">' + esc(m.email||'') + '</div></div><div class="toggle-wrap"><span class="toggle-lbl">' + (m.active?'수신':'중지') + '</span><button class="toggle ' + (m.active?'on':'off') + '" onclick="toggleMember(\'' + esc(m.email) + '\', this)"></button></div></div>').join('');
+  } catch(e) { box.innerHTML = '<div class="empty">서버에 연결할 수 없습니다.</div>'; }
+}
+
+async function toggleMember(email, btn) {
+  const isOn = btn.classList.contains('on');
+  btn.classList.toggle('on', !isOn);
+  btn.classList.toggle('off', isOn);
+  btn.previousElementSibling.textContent = isOn ? '중지' : '수신';
+  await fetch(API_BASE + '/api/members/' + encodeURIComponent(email), { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({active: !isOn}) });
+}
+
+async function addMember() {
+  const name = document.getElementById('newName').value.trim();
+  const email = document.getElementById('newEmail').value.trim();
+  if (!name || !email) { alert('이름과 이메일을 모두 입력해주세요.'); return; }
+  try {
+    const resp = await fetch(API_BASE + '/api/members', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, email}) });
+    if (resp.ok) { document.getElementById('newName').value=''; document.getElementById('newEmail').value=''; loadMembers(); }
+  } catch(e) { alert('팀원 추가에 실패했습니다.'); }
+}
+
+function fmtDate(d) { if (!d || d.length < 8) return d || '-'; return d.slice(0,4)+'.'+d.slice(4,6)+'.'+d.slice(6,8); }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 알림 내역
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function loadAlerts() {
+  const box = document.getElementById('alertList');
+  box.innerHTML = '<div class="loading"><span class="spinner"></span>불러오는 중...</div>';
+  try {
+    const resp = await fetch(API_BASE + '/api/alerts');
+    const data = await resp.json();
+    const alerts = data.alerts || [];
+
+    if (!alerts.length) {
+      box.innerHTML = '<div class="empty">아직 알림이 없습니다.<br><br>키워드를 등록하고 [지금 확인] 버튼을 눌러보세요.</div>';
+      return;
+    }
+
+    box.innerHTML = alerts.map(a => {
+      const isLaw = a.type === 'law';
+      const cardClass = isLaw ? 'new' : 'info';
+      const typeLabel = isLaw ? '📜 법령 개정' : '⚖ 판례';
+      const tagClass = isLaw ? 'tag2-red' : 'tag2-blue';
+
+      return `<div class="alert-card ${cardClass}">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <span class="tag2 ${tagClass}">${typeLabel}</span>
+          <span class="tag2 tag2-gold">#${esc(a.keyword)}</span>
+          <span style="font-size:12px; color:var(--muted);">${fmtDate(a.date)}</span>
+        </div>
+        <div class="alert-title-text">${esc(a.title)}</div>
+        <div class="alert-desc">${esc(a.snippet)}</div>
+        ${isLaw && a.dept ? `<div class="alert-date">소관부처: ${esc(a.dept)}</div>` : ''}
+        ${!isLaw && a.court ? `<div class="alert-date">${esc(a.court)} · ${esc(a.caseNo)}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    box.innerHTML = '<div class="empty">알림을 불러올 수 없습니다.</div>';
+  }
+}
+
+async function checkAlertsNow() {
+  const box = document.getElementById('alertList');
+  box.innerHTML = '<div class="loading"><span class="spinner"></span>법제처에서 최근 7일 데이터 확인 중... (15초 소요)</div>';
+  try {
+    const resp = await fetch(API_BASE + '/api/alerts/check', { method: 'POST' });
+    const data = await resp.json();
+    alert(`✅ 알림 체크 완료!\n새 알림: ${data.newAlerts}건\n이메일 발송: ${data.emailsSent}명\n검사한 키워드: ${(data.keywords||[]).length}개`);
+    loadAlerts();
+  } catch(e) {
+    alert('체크에 실패했습니다.');
+    loadAlerts();
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 키워드 관리
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function loadKeywords() {
+  // 공통 키워드 로드
+  try {
+    const resp = await fetch(API_BASE + '/api/keywords');
+    const data = await resp.json();
+    const list = data.commonKeywords || [];
+    const box = document.getElementById('commonKwList');
+    if (!list.length) {
+      box.innerHTML = '<div style="color:var(--muted); font-size:13px;">등록된 공통 키워드가 없습니다.</div>';
+    } else {
+      box.innerHTML = list.map(kw => `
+        <div style="display:inline-flex; align-items:center; gap:6px; background:var(--navy); color:white; padding:6px 12px; border-radius:99px; font-size:13px;">
+          <span>#${esc(kw)}</span>
+          <button onclick="removeCommonKeyword('${esc(kw)}')" style="background:transparent; border:none; color:var(--accent-light); cursor:pointer; padding:0; font-size:14px;">✕</button>
+        </div>
+      `).join('');
+    }
+  } catch(e) {
+    document.getElementById('commonKwList').innerHTML = '<div class="empty">서버에 연결할 수 없습니다.</div>';
+  }
+
+  // 팀원별 개인 키워드 로드
+  try {
+    const resp = await fetch(API_BASE + '/api/members');
+    const members = await resp.json();
+    const box = document.getElementById('personalKwSection');
+
+    box.innerHTML = members.map(m => `
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1rem 1.2rem; margin-bottom:8px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <div class="avatar">${esc(m.name.slice(0,2))}</div>
+          <div>
+            <div class="member-name">${esc(m.name)}</div>
+            <div class="member-email">${esc(m.email)}</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <input class="form-input" id="kw-${esc(m.email)}" type="text" placeholder="개인 관심 키워드 추가"
+            onkeydown="if(event.key==='Enter') addPersonalKeyword('${esc(m.email)}')" style="font-size:12px; padding:7px 10px;" />
+          <button class="btn-search" onclick="addPersonalKeyword('${esc(m.email)}')" style="padding:7px 12px; font-size:12px;">추가</button>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+          ${(m.personalKeywords || []).length === 0
+            ? '<span style="color:var(--muted); font-size:12px;">등록된 키워드 없음</span>'
+            : (m.personalKeywords || []).map(kw => `
+              <div style="display:inline-flex; align-items:center; gap:6px; background:var(--blue-bg); color:var(--blue); padding:4px 10px; border-radius:99px; font-size:12px;">
+                <span>#${esc(kw)}</span>
+                <button onclick="removePersonalKeyword('${esc(m.email)}', '${esc(kw)}')" style="background:transparent; border:none; color:var(--blue); cursor:pointer; padding:0; font-size:12px;">✕</button>
+              </div>
+            `).join('')
+          }
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('personalKwSection').innerHTML = '<div class="empty">서버에 연결할 수 없습니다.</div>';
+  }
+}
+
+async function addCommonKeyword() {
+  const input = document.getElementById('newCommonKw');
+  const kw = input.value.trim();
+  if (!kw) return;
+  try {
+    const resp = await fetch(API_BASE + '/api/keywords', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keyword: kw }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) { alert(data.error || '추가 실패'); return; }
+    input.value = '';
+    loadKeywords();
+  } catch(e) { alert('추가 실패'); }
+}
+
+async function removeCommonKeyword(kw) {
+  if (!confirm(`"${kw}" 키워드를 삭제할까요?`)) return;
+  try {
+    await fetch(API_BASE + '/api/keywords/' + encodeURIComponent(kw), { method: 'DELETE' });
+    loadKeywords();
+  } catch(e) { alert('삭제 실패'); }
+}
+
+async function addPersonalKeyword(email) {
+  const input = document.getElementById('kw-' + email);
+  const kw = input.value.trim();
+  if (!kw) return;
+  try {
+    // 현재 키워드 목록 조회
+    const resp = await fetch(API_BASE + '/api/members');
+    const members = await resp.json();
+    const m = members.find(x => x.email === email);
+    if (!m) return;
+    const newKeywords = [...(m.personalKeywords || [])];
+    if (newKeywords.includes(kw)) { alert('이미 등록된 키워드입니다.'); return; }
+    newKeywords.push(kw);
+    await fetch(API_BASE + '/api/members/' + encodeURIComponent(email), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ personalKeywords: newKeywords }),
+    });
+    input.value = '';
+    loadKeywords();
+  } catch(e) { alert('추가 실패'); }
+}
+
+async function removePersonalKeyword(email, kw) {
+  if (!confirm(`"${kw}" 키워드를 삭제할까요?`)) return;
+  try {
+    const resp = await fetch(API_BASE + '/api/members');
+    const members = await resp.json();
+    const m = members.find(x => x.email === email);
+    if (!m) return;
+    const newKeywords = (m.personalKeywords || []).filter(k => k !== kw);
+    await fetch(API_BASE + '/api/members/' + encodeURIComponent(email), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ personalKeywords: newKeywords }),
+    });
+    loadKeywords();
+  } catch(e) { alert('삭제 실패'); }
+}
+
+function esc(str) { if (!str) return ''; return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// 여러 키워드를 동시에 하이라이트
+function hiliteAll(text, query) {
+  if (!text) return '';
+  let result = esc(text);
+  // 검색어 + 동의어 모두 하이라이트
+  const terms = new Set([query]);
+  // 일반적인 동의어를 클라이언트에서도 하이라이트
+  const synonymHints = {
+    '권고사직': ['권고사직','권고 사직','사직 권고','퇴직 권유'],
+    '연차휴가': ['연차','연차 유급휴가','연차유급휴가'],
+    '연차': ['연차','연차 유급휴가','연차유급휴가'],
+    '해고': ['해고','해임','파면','면직'],
+    '퇴직금': ['퇴직금','퇴직급여'],
+    '출산': ['출산휴가','출산전후휴가','산전후휴가','배우자 출산휴가'],
+    '배우자 출산휴가': ['배우자 출산휴가','배우자출산휴가'],
+  };
+  (synonymHints[query] || []).forEach(t => terms.add(t));
+
+  // 긴 단어부터 매칭해서 부분 일치 방지
+  const sorted = [...terms].sort((a,b) => b.length - a.length);
+  sorted.forEach(t => {
+    if (!t) return;
+    const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    result = result.replace(new RegExp(escaped, 'g'), '<mark>' + esc(t) + '</mark>');
+  });
+  return result;
+}
+</script>
+</body>
+</html>
