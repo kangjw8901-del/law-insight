@@ -511,9 +511,42 @@ async function fetchArticles(mst, keywords) {
 // ─────────────────────────────────────────────────────────
 // 판례 검색 (페이지네이션 지원)
 // ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// 판례 본문 조회 (판결요지, 판결이유, 참조조문 등)
+// ─────────────────────────────────────────────────────────
+async function fetchPrecedentBody(precId) {
+  try {
+    const resp = await axios.get(`${BASE}/lawService.do`, {
+      params: { OC: API_KEY, target: 'prec', type: 'JSON', ID: precId },
+      timeout: 8000,
+    });
+    const data = resp.data?.PrecService || {};
+    return {
+      판결요지: data.판결요지 || '',
+      판결이유: data.판결이유 || '',
+      참조조문: data.참조조문 || '',
+      참조판례: data.참조판례 || '',
+      판시사항: data.판시사항 || '',
+    };
+  } catch (err) {
+    return null;
+  }
+}
+
+// 본문 텍스트에 키워드가 하나라도 있는지 검사
+function bodyMatchesKeywords(body, keywords) {
+  if (!body) return false;
+  const fullText = JSON.stringify(body);
+  const normalized = fullText.replace(/\s+/g, '');
+  return keywords.some(kw => {
+    const kwNorm = kw.replace(/\s+/g, '');
+    return fullText.includes(kw) || normalized.includes(kwNorm);
+  });
+}
+
 async function searchPrecedents(keywords, page = 1, display = 20) {
   try {
-    // 동의어 상위 5개로 병렬 검색 (호출 폭주 방지)
+    // 동의어 상위 5개로 목록 검색
     const searchTerms = keywords.slice(0, 5);
 
     const results = await Promise.allSettled(
@@ -521,7 +554,7 @@ async function searchPrecedents(keywords, page = 1, display = 20) {
         axios.get(`${BASE}/lawSearch.do`, {
           params: {
             OC: API_KEY, target: 'prec', type: 'JSON',
-            query: kw, display, page,
+            query: kw, display: 30, page: 1,  // 각 키워드당 30건씩
             sort: 'date',
           },
           timeout: 15000,
@@ -529,22 +562,60 @@ async function searchPrecedents(keywords, page = 1, display = 20) {
       )
     );
 
-    // 각 검색 결과를 합치고 중복 제거
+    // 1) 목록 검색 결과 수집 (제목/판시사항 매칭)
     const seenIds = new Set();
-    let allItems = [];
-    let maxTotal = 0;
+    const titleMatched = [];
 
     results.forEach(r => {
       if (r.status !== 'fulfilled') return;
       const list = r.value.data?.PrecSearch?.prec || [];
-      const totalCnt = parseInt(r.value.data?.PrecSearch?.totalCnt || '0', 10);
-      if (totalCnt > maxTotal) maxTotal = totalCnt;
 
       (Array.isArray(list) ? list : [list]).forEach(p => {
         const id = p.판례일련번호 || '';
         if (id && seenIds.has(id)) return;
         if (id) seenIds.add(id);
-        allItems.push({
+        titleMatched.push({
+          사건명: p.사건명 || '',
+          사건번호: p.사건번호 || '',
+          선고일자: p.선고일자 || '',
+          법원명: p.법원명 || '',
+          판시사항: p.판시사항 || '',
+          판례일련번호: id,
+          링크: id ? `https://www.law.go.kr/LSW/precInfoP.do?precSeq=${id}` : '',
+          검색링크: p.사건번호
+            ? `https://www.law.go.kr/판례검색?query=${encodeURIComponent(p.사건번호)}`
+            : `https://www.law.go.kr/판례검색?query=${encodeURIComponent(p.사건명 || '')}`,
+          본문매칭: false,  // 목록 매칭은 false (제목/판시사항에만 있음)
+        });
+      });
+    });
+
+    // 2) 본문 검색을 위한 추가 후보 가져오기 (광범위)
+    //    노동 관련 일반 키워드로 더 많은 판례를 가져와서 본문 검사
+    const bodyCandidateTerms = ['해고', '근로', '임금', '근로계약', '퇴직']
+      .filter(t => !searchTerms.includes(t));
+
+    const bodyResults = await Promise.allSettled(
+      bodyCandidateTerms.slice(0, 3).map(kw =>
+        axios.get(`${BASE}/lawSearch.do`, {
+          params: {
+            OC: API_KEY, target: 'prec', type: 'JSON',
+            query: kw, display: 30, page: 1, sort: 'date',
+          },
+          timeout: 15000,
+        })
+      )
+    );
+
+    const bodyCheckCandidates = [];
+    bodyResults.forEach(r => {
+      if (r.status !== 'fulfilled') return;
+      const list = r.value.data?.PrecSearch?.prec || [];
+      (Array.isArray(list) ? list : [list]).forEach(p => {
+        const id = p.판례일련번호 || '';
+        if (id && seenIds.has(id)) return;
+        if (id) seenIds.add(id);
+        bodyCheckCandidates.push({
           사건명: p.사건명 || '',
           사건번호: p.사건번호 || '',
           선고일자: p.선고일자 || '',
@@ -559,16 +630,42 @@ async function searchPrecedents(keywords, page = 1, display = 20) {
       });
     });
 
-    // 선고일자 내림차순 (최신순) 정렬
+    // 3) 본문 조회 후 키워드 매칭 (병렬, 최대 30개만)
+    const toCheck = bodyCheckCandidates.slice(0, 30);
+    const bodyChecks = await Promise.allSettled(
+      toCheck.map(async p => {
+        const body = await fetchPrecedentBody(p.판례일련번호);
+        if (body && bodyMatchesKeywords(body, keywords)) {
+          // 본문 일부를 판시사항에 미리보기로 추가
+          if (!p.판시사항 && body.판결요지) {
+            p.판시사항 = (body.판결요지 || '').slice(0, 250);
+          }
+          p.본문매칭 = true;
+          return p;
+        }
+        return null;
+      })
+    );
+
+    const bodyMatched = bodyChecks
+      .filter(r => r.status === 'fulfilled' && r.value)
+      .map(r => r.value);
+
+    // 4) 제목 매칭 + 본문 매칭 합치기
+    let allItems = [...titleMatched, ...bodyMatched];
+
+    // 5) 선고일자 내림차순 정렬
     allItems.sort((a, b) => (b.선고일자 || '').localeCompare(a.선고일자 || ''));
 
-    // 페이지당 display 건수로 자르기
+    // 6) 페이지네이션
     const startIdx = (page - 1) * display;
     const pagedItems = allItems.slice(startIdx, startIdx + display);
 
     return {
       items: pagedItems,
-      totalCnt: Math.max(allItems.length, maxTotal),
+      totalCnt: allItems.length,
+      titleMatchCount: titleMatched.length,
+      bodyMatchCount: bodyMatched.length,
       page,
       display,
     };
@@ -582,6 +679,24 @@ async function searchPrecedents(keywords, page = 1, display = 20) {
 // 행정해석 검색 (고용노동부 등 행정기관의 법령 해석)
 // target='expc' : 법령해석례
 // ─────────────────────────────────────────────────────────
+// 행정해석 본문 조회
+async function fetchExpcBody(expcId) {
+  try {
+    const resp = await axios.get(`${BASE}/lawService.do`, {
+      params: { OC: API_KEY, target: 'expc', type: 'JSON', ID: expcId },
+      timeout: 8000,
+    });
+    const data = resp.data?.Expc || resp.data?.법령해석례 || {};
+    return {
+      질의요지: data.질의요지 || '',
+      회답: data.회답 || '',
+      이유: data.이유 || data.해석이유 || '',
+    };
+  } catch (err) {
+    return null;
+  }
+}
+
 async function searchExpcs(keywords, page = 1, display = 10) {
   try {
     const searchTerms = keywords.slice(0, 5);
@@ -591,8 +706,7 @@ async function searchExpcs(keywords, page = 1, display = 10) {
         axios.get(`${BASE}/lawSearch.do`, {
           params: {
             OC: API_KEY, target: 'expc', type: 'JSON',
-            query: kw, display, page,
-            sort: 'date',
+            query: kw, display: 20, page: 1, sort: 'date',
           },
           timeout: 15000,
         })
@@ -600,20 +714,55 @@ async function searchExpcs(keywords, page = 1, display = 10) {
     );
 
     const seenIds = new Set();
-    let allItems = [];
-    let maxTotal = 0;
+    const titleMatched = [];
 
     results.forEach(r => {
       if (r.status !== 'fulfilled') return;
       const list = r.value.data?.Expc?.expc || [];
-      const totalCnt = parseInt(r.value.data?.Expc?.totalCnt || '0', 10);
-      if (totalCnt > maxTotal) maxTotal = totalCnt;
 
       (Array.isArray(list) ? list : [list]).forEach(e => {
         const id = e.법령해석례일련번호 || e.해석례일련번호 || '';
         if (id && seenIds.has(id)) return;
         if (id) seenIds.add(id);
-        allItems.push({
+        titleMatched.push({
+          안건명: e.안건명 || '',
+          안건번호: e.안건번호 || '',
+          회신일자: e.회신일자 || e.해석일자 || '',
+          해석기관: e.해석기관명 || e.회신기관명 || '고용노동부',
+          질의요지: (e.질의요지 || '').slice(0, 250),
+          회답: (e.회답 || '').slice(0, 300),
+          해석례일련번호: id,
+          링크: id ? `https://www.law.go.kr/LSW/expcInfoP.do?expcSeq=${id}` : '',
+          본문매칭: false,
+        });
+      });
+    });
+
+    // 본문 검사를 위한 추가 후보 (광범위 키워드)
+    const bodyCandidateTerms = ['해고', '근로', '임금', '근로계약']
+      .filter(t => !searchTerms.includes(t));
+
+    const bodyResults = await Promise.allSettled(
+      bodyCandidateTerms.slice(0, 2).map(kw =>
+        axios.get(`${BASE}/lawSearch.do`, {
+          params: {
+            OC: API_KEY, target: 'expc', type: 'JSON',
+            query: kw, display: 20, page: 1, sort: 'date',
+          },
+          timeout: 15000,
+        })
+      )
+    );
+
+    const bodyCheckCandidates = [];
+    bodyResults.forEach(r => {
+      if (r.status !== 'fulfilled') return;
+      const list = r.value.data?.Expc?.expc || [];
+      (Array.isArray(list) ? list : [list]).forEach(e => {
+        const id = e.법령해석례일련번호 || e.해석례일련번호 || '';
+        if (id && seenIds.has(id)) return;
+        if (id) seenIds.add(id);
+        bodyCheckCandidates.push({
           안건명: e.안건명 || '',
           안건번호: e.안건번호 || '',
           회신일자: e.회신일자 || e.해석일자 || '',
@@ -626,6 +775,26 @@ async function searchExpcs(keywords, page = 1, display = 10) {
       });
     });
 
+    // 본문 검사 (최대 20개)
+    const toCheck = bodyCheckCandidates.slice(0, 20);
+    const bodyChecks = await Promise.allSettled(
+      toCheck.map(async e => {
+        const body = await fetchExpcBody(e.해석례일련번호);
+        if (body && bodyMatchesKeywords(body, keywords)) {
+          if (!e.질의요지 && body.질의요지) e.질의요지 = body.질의요지.slice(0, 250);
+          if (!e.회답 && body.회답) e.회답 = body.회답.slice(0, 300);
+          e.본문매칭 = true;
+          return e;
+        }
+        return null;
+      })
+    );
+
+    const bodyMatched = bodyChecks
+      .filter(r => r.status === 'fulfilled' && r.value)
+      .map(r => r.value);
+
+    let allItems = [...titleMatched, ...bodyMatched];
     allItems.sort((a, b) => (b.회신일자 || '').localeCompare(a.회신일자 || ''));
 
     const startIdx = (page - 1) * display;
@@ -633,7 +802,9 @@ async function searchExpcs(keywords, page = 1, display = 10) {
 
     return {
       items: pagedItems,
-      totalCnt: Math.max(allItems.length, maxTotal),
+      totalCnt: allItems.length,
+      titleMatchCount: titleMatched.length,
+      bodyMatchCount: bodyMatched.length,
       page,
       display,
     };
