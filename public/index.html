@@ -409,7 +409,7 @@ async function doSearch() {
   const query = document.getElementById('searchInput').value.trim();
   if (!query) return;
   const box = document.getElementById('searchResult');
-  box.innerHTML = '<div class="loading"><span class="spinner"></span>법령 · 조문 · 판례 · 행정해석 검색 중... (15-20초 소요)</div>';
+  box.innerHTML = '<div class="loading"><span class="spinner"></span>법령 · 조문 · 판례 · 행정해석 본문까지 정밀 검색 중... (20-30초 소요)</div>';
 
   try {
     const resp = await fetch(API_BASE + '/api/search?query=' + encodeURIComponent(query));
@@ -527,6 +527,9 @@ function renderExpcCard(e) {
   html += '<div class="prec-card-court">' + esc(e.해석기관 || '고용노동부') + ' · ' + fmtDate(e.회신일자) + '</div>';
   html += '<div class="prec-card-case">' + esc(e.안건명 || '행정해석') + '</div>';
   if (e.안건번호) html += '<div style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:3px;">' + esc(e.안건번호) + '</div>';
+  if (e.본문매칭) {
+    html += '<div style="margin-top:5px;"><span style="background:rgba(200,146,42,0.3); color:#f0d090; font-size:10px; padding:2px 7px; border-radius:99px;">본문 매칭</span></div>';
+  }
   html += '</div>';
   html += '<div class="prec-card-body">';
   if (e.질의요지) {
@@ -697,10 +700,14 @@ function renderPrecCard(p) {
   html += '<div class="prec-card-court">' + esc(p.법원명 || '대법원') + ' · ' + fmtDate(p.선고일자) + '</div>';
   html += '<div class="prec-card-case">' + esc(p.사건명 || '판례') + '</div>';
   if (p.사건번호) html += '<div style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:3px;">' + esc(p.사건번호) + '</div>';
+  // 본문매칭 배지
+  if (p.본문매칭) {
+    html += '<div style="margin-top:5px;"><span style="background:rgba(200,146,42,0.3); color:#f0d090; font-size:10px; padding:2px 7px; border-radius:99px;">본문 매칭</span></div>';
+  }
   html += '</div>';
   html += '<div class="prec-card-body">';
   if (p.판시사항) {
-    html += '<div class="prec-card-title">판시사항</div>';
+    html += '<div class="prec-card-title">' + (p.본문매칭 ? '판결요지 미리보기' : '판시사항') + '</div>';
     const summary = p.판시사항.length > 250 ? p.판시사항.slice(0,250) + '...' : p.판시사항;
     html += '<div class="prec-card-summary">' + esc(summary) + '</div>';
   } else {
