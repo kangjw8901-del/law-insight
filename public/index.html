@@ -390,7 +390,7 @@ mark { background: #fff3cd; color: #8a5c00; border-radius: 2px; padding: 0 2px; 
 </main>
 
 <script>
-const API_BASE = 'http://localhost:3000';
+const API_BASE = '';  // 빈 문자열 = 같은 서버 (로컬/배포 모두 작동)
 
 function switchTab(name, el) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
