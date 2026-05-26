@@ -513,38 +513,65 @@ async function fetchArticles(mst, keywords) {
 // ─────────────────────────────────────────────────────────
 async function searchPrecedents(keywords, page = 1, display = 20) {
   try {
-    const mainKw = keywords[0];
-    const resp = await axios.get(`${BASE}/lawSearch.do`, {
-      params: {
-        OC: API_KEY, target: 'prec', type: 'JSON',
-        query: mainKw, display, page,
-        sort: 'date', // 최신순
-      },
-      timeout: 15000,
+    // 동의어 상위 5개로 병렬 검색 (호출 폭주 방지)
+    const searchTerms = keywords.slice(0, 5);
+
+    const results = await Promise.allSettled(
+      searchTerms.map(kw =>
+        axios.get(`${BASE}/lawSearch.do`, {
+          params: {
+            OC: API_KEY, target: 'prec', type: 'JSON',
+            query: kw, display, page,
+            sort: 'date',
+          },
+          timeout: 15000,
+        })
+      )
+    );
+
+    // 각 검색 결과를 합치고 중복 제거
+    const seenIds = new Set();
+    let allItems = [];
+    let maxTotal = 0;
+
+    results.forEach(r => {
+      if (r.status !== 'fulfilled') return;
+      const list = r.value.data?.PrecSearch?.prec || [];
+      const totalCnt = parseInt(r.value.data?.PrecSearch?.totalCnt || '0', 10);
+      if (totalCnt > maxTotal) maxTotal = totalCnt;
+
+      (Array.isArray(list) ? list : [list]).forEach(p => {
+        const id = p.판례일련번호 || '';
+        if (id && seenIds.has(id)) return;
+        if (id) seenIds.add(id);
+        allItems.push({
+          사건명: p.사건명 || '',
+          사건번호: p.사건번호 || '',
+          선고일자: p.선고일자 || '',
+          법원명: p.법원명 || '',
+          판시사항: p.판시사항 || '',
+          판례일련번호: id,
+          링크: id ? `https://www.law.go.kr/LSW/precInfoP.do?precSeq=${id}` : '',
+          검색링크: p.사건번호
+            ? `https://www.law.go.kr/판례검색?query=${encodeURIComponent(p.사건번호)}`
+            : `https://www.law.go.kr/판례검색?query=${encodeURIComponent(p.사건명 || '')}`,
+        });
+      });
     });
-    const list = resp.data?.PrecSearch?.prec || [];
-    const totalCnt = parseInt(resp.data?.PrecSearch?.totalCnt || '0', 10);
 
-    let items = (Array.isArray(list) ? list : [list]).map(p => {
-      const id = p.판례일련번호 || '';
-      return {
-        사건명: p.사건명 || '',
-        사건번호: p.사건번호 || '',
-        선고일자: p.선고일자 || '',
-        법원명: p.법원명 || '',
-        판시사항: p.판시사항 || '',
-        판례일련번호: id,
-        링크: id ? `https://www.law.go.kr/LSW/precInfoP.do?precSeq=${id}` : '',
-        검색링크: p.사건번호
-          ? `https://www.law.go.kr/판례검색?query=${encodeURIComponent(p.사건번호)}`
-          : `https://www.law.go.kr/판례검색?query=${encodeURIComponent(p.사건명 || '')}`,
-      };
-    });
+    // 선고일자 내림차순 (최신순) 정렬
+    allItems.sort((a, b) => (b.선고일자 || '').localeCompare(a.선고일자 || ''));
 
-    // 선고일자 내림차순 (최신순) 정렬 보강
-    items.sort((a, b) => (b.선고일자 || '').localeCompare(a.선고일자 || ''));
+    // 페이지당 display 건수로 자르기
+    const startIdx = (page - 1) * display;
+    const pagedItems = allItems.slice(startIdx, startIdx + display);
 
-    return { items, totalCnt, page, display };
+    return {
+      items: pagedItems,
+      totalCnt: Math.max(allItems.length, maxTotal),
+      page,
+      display,
+    };
   } catch (err) {
     console.error('판례 검색 실패:', err.message);
     return { items: [], totalCnt: 0, page, display };
@@ -557,36 +584,59 @@ async function searchPrecedents(keywords, page = 1, display = 20) {
 // ─────────────────────────────────────────────────────────
 async function searchExpcs(keywords, page = 1, display = 10) {
   try {
-    const mainKw = keywords[0];
-    const resp = await axios.get(`${BASE}/lawSearch.do`, {
-      params: {
-        OC: API_KEY, target: 'expc', type: 'JSON',
-        query: mainKw, display, page,
-        sort: 'date', // 최신순
-      },
-      timeout: 15000,
+    const searchTerms = keywords.slice(0, 5);
+
+    const results = await Promise.allSettled(
+      searchTerms.map(kw =>
+        axios.get(`${BASE}/lawSearch.do`, {
+          params: {
+            OC: API_KEY, target: 'expc', type: 'JSON',
+            query: kw, display, page,
+            sort: 'date',
+          },
+          timeout: 15000,
+        })
+      )
+    );
+
+    const seenIds = new Set();
+    let allItems = [];
+    let maxTotal = 0;
+
+    results.forEach(r => {
+      if (r.status !== 'fulfilled') return;
+      const list = r.value.data?.Expc?.expc || [];
+      const totalCnt = parseInt(r.value.data?.Expc?.totalCnt || '0', 10);
+      if (totalCnt > maxTotal) maxTotal = totalCnt;
+
+      (Array.isArray(list) ? list : [list]).forEach(e => {
+        const id = e.법령해석례일련번호 || e.해석례일련번호 || '';
+        if (id && seenIds.has(id)) return;
+        if (id) seenIds.add(id);
+        allItems.push({
+          안건명: e.안건명 || '',
+          안건번호: e.안건번호 || '',
+          회신일자: e.회신일자 || e.해석일자 || '',
+          해석기관: e.해석기관명 || e.회신기관명 || '고용노동부',
+          질의요지: (e.질의요지 || '').slice(0, 250),
+          회답: (e.회답 || '').slice(0, 300),
+          해석례일련번호: id,
+          링크: id ? `https://www.law.go.kr/LSW/expcInfoP.do?expcSeq=${id}` : '',
+        });
+      });
     });
-    const list = resp.data?.Expc?.expc || [];
-    const totalCnt = parseInt(resp.data?.Expc?.totalCnt || '0', 10);
 
-    let items = (Array.isArray(list) ? list : [list]).map(e => {
-      const id = e.법령해석례일련번호 || e.해석례일련번호 || '';
-      return {
-        안건명: e.안건명 || '',
-        안건번호: e.안건번호 || '',
-        회신일자: e.회신일자 || e.해석일자 || '',
-        해석기관: e.해석기관명 || e.회신기관명 || '고용노동부',
-        질의요지: (e.질의요지 || '').slice(0, 250),
-        회답: (e.회답 || '').slice(0, 300),
-        해석례일련번호: id,
-        링크: id ? `https://www.law.go.kr/LSW/expcInfoP.do?expcSeq=${id}` : '',
-      };
-    });
+    allItems.sort((a, b) => (b.회신일자 || '').localeCompare(a.회신일자 || ''));
 
-    // 회신일자 내림차순 (최신순) 정렬 보강
-    items.sort((a, b) => (b.회신일자 || '').localeCompare(a.회신일자 || ''));
+    const startIdx = (page - 1) * display;
+    const pagedItems = allItems.slice(startIdx, startIdx + display);
 
-    return { items, totalCnt, page, display };
+    return {
+      items: pagedItems,
+      totalCnt: Math.max(allItems.length, maxTotal),
+      page,
+      display,
+    };
   } catch (err) {
     console.error('행정해석 검색 실패:', err.message);
     return { items: [], totalCnt: 0, page, display };
